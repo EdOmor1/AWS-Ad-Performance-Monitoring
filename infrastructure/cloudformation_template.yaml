@@ -1,0 +1,53 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  PerformanceDataRDSInstance:
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      DBInstanceIdentifier: 'performance-data-rds'
+      AllocatedStorage: '20'
+      DBInstanceClass: 'db.t2.micro'
+      Engine: 'mysql'
+      MasterUsername: 'admin'
+      MasterUserPassword: 'password'
+      BackupRetentionPeriod: 7
+      PubliclyAccessible: false
+      StorageType: 'gp2'
+  
+  LambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'lambda.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'LambdaExecutionPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 
+                  - 'logs:*'
+                  - 'sns:*'
+                  - 'rds:*'
+                Resource: '*'
+  PerformanceMonitorFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: 'PerformanceMonitorFunction'
+      Handler: 'src/lambda_function.lambda_handler'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: 'your-bucket-name'
+        S3Key: 'performance_monitor.zip'
+      Runtime: 'python3.8'
+      Timeout: 60
+      MemorySize: 128
+
+  PerformanceAlertsTopic:
+    Type: 'AWS::SNS::Topic'
+    Properties:
+      TopicName: 'PerformanceAlertsTopic'
